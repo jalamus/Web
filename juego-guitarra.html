@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fretboard Memory Master</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d1810 100%);
+            color: white;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .game-container {
+            max-width: 800px;
+            width: 100%;
+            text-align: center;
+        }
+
+        .game-header {
+            margin-bottom: 30px;
+        }
+
+        .game-title {
+            font-size: 2.5rem;
+            font-weight: bold;
+            background: linear-gradient(45deg, #ff6b35, #f7931e);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+
+        .game-stats {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .stat {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px 25px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.8;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #ff6b35;
+        }
+
+        .fretboard-container {
+            background: linear-gradient(to bottom, #8B4513 0%, #A0522D 50%, #8B4513 100%);
+            border-radius: 20px;
+            padding: 30px;
+            margin: 30px 0;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .fretboard {
+            position: relative;
+            width: 100%;
+            height: 400px;
+            background: linear-gradient(to right, #D2691E 0%, #CD853F 100%);
+            border-radius: 10px;
+            display: grid;
+            grid-template-columns: repeat(13, 1fr);
+            grid-template-rows: repeat(6, 1fr);
+            gap: 2px;
+            padding: 10px;
+        }
+
+        .fret {
+            position: relative;
+            border-right: 2px solid #C0C0C0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .fret:first-child {
+            border-left: 4px solid #FFD700;
+        }
+
+        .fret:nth-child(13n) {
+            border-right: none;
+        }
+
+        .string-line {
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: #C0C0C0;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 1;
+        }
+
+        .note-button {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: none;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 2;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .note-button.visible {
+            background: linear-gradient(45deg, #4a90e2, #357abd);
+            color: white;
+            box-shadow: 0 4px 15px rgba(74, 144, 226, 0.4);
+        }
+
+        .note-button.hidden {
+            background: rgba(255, 255, 255, 0.2);
+            color: transparent;
+            border: 2px dashed rgba(255, 255, 255, 0.3);
+        }
+
+        .note-button.correct {
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            animation: pulse-correct 0.6s ease;
+        }
+
+        .note-button.incorrect {
+            background: linear-gradient(45deg, #f44336, #d32f2f);
+            animation: shake 0.5s ease;
+        }
+
+        .note-button.clickable:hover {
+            transform: scale(1.1);
+        }
+
+        @keyframes pulse-correct {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin-top: 30px;
+        }
+
+        .btn {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(45deg, #ff6b35, #f7931e);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .message {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            min-height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .message.success {
+            background: rgba(76, 175, 80, 0.2);
+            color: #4CAF50;
+            border: 2px solid rgba(76, 175, 80, 0.5);
+        }
+
+        .message.error {
+            background: rgba(244, 67, 54, 0.2);
+            color: #f44336;
+            border: 2px solid rgba(244, 67, 54, 0.5);
+        }
+
+        .message.info {
+            background: rgba(74, 144, 226, 0.2);
+            color: #4a90e2;
+            border: 2px solid rgba(74, 144, 226, 0.5);
+        }
+
+        .fret-markers {
+            position: absolute;
+            top: -20px;
+            left: 10px;
+            right: 10px;
+            display: grid;
+            grid-template-columns: repeat(13, 1fr);
+            gap: 2px;
+        }
+
+        .fret-number {
+            text-align: center;
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.6);
+            font-weight: bold;
+        }
+
+        .string-labels {
+            position: absolute;
+            left: -30px;
+            top: 10px;
+            bottom: 10px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-around;
+            align-items: center;
+        }
+
+        .string-label {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.8);
+            font-weight: bold;
+        }
+
+        @media (max-width: 768px) {
+            .game-title {
+                font-size: 2rem;
+            }
+            
+            .fretboard {
+                height: 300px;
+            }
+            
+            .note-button {
+                width: 30px;
+                height: 30px;
+                font-size: 12px;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .btn {
+                width: 200px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="game-header">
+            <h1 class="game-title">Fretboard Memory Master</h1>
+            <div class="game-stats">
+                <div class="stat">
+                    <div class="stat-label">Nivel</div>
+                    <div class="stat-value" id="level">1</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">Puntos</div>
+                    <div class="stat-value" id="score">0</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">Racha</div>
+                    <div class="stat-value" id="streak">0</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="fretboard-container">
+            <div class="fret-markers" id="fretMarkers"></div>
+            <div class="string-labels">
+                <div class="string-label">E</div>
+                <div class="string-label">B</div>
+                <div class="string-label">G</div>
+                <div class="string-label">D</div>
+                <div class="string-label">A</div>
+                <div class="string-label">E</div>
+            </div>
+            <div class="fretboard" id="fretboard"></div>
+        </div>
+
+        <div class="message info" id="message">
+            ¡Memoriza las notas y luego tócalas en el orden correcto!
+        </div>
+
+        <div class="controls">
+            <button class="btn btn-primary" id="startBtn">Comenzar Juego</button>
+            <button class="btn btn-secondary" id="showNotesBtn" disabled>Mostrar Notas</button>
+            <button class="btn btn-secondary" id="resetBtn">Reiniciar</button>
+        </div>
+    </div>
+
+    <script>
+        class FretboardMemoryGame {
+            constructor() {
+                this.fretboard = document.getElementById('fretboard');
+                this.message = document.getElementById('message');
+                this.startBtn = document.getElementById('startBtn');
+                this.showNotesBtn = document.getElementById('showNotesBtn');
+                this.resetBtn = document.getElementById('resetBtn');
+                
+                this.level = 1;
+                this.score = 0;
+                this.streak = 0;
+                this.gameState = 'ready'; // ready, showing, memorizing, playing, complete
+                this.currentSequence = [];
+                this.playerSequence = [];
+                this.showingIndex = 0;
+                
+                // Configuración del diapasón (12 trastes, 6 cuerdas)
+                this.notes = [
+                    ['E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B', 'C', 'C#', 'D', 'D#', 'E'], // 6ta cuerda (E)
+                    ['B', 'C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'], // 5ta cuerda (B)
+                    ['G', 'G#', 'A', 'A#', 'B', 'C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G'], // 4ta cuerda (G)
+                    ['D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B', 'C', 'C#', 'D'], // 3ra cuerda (D)
+                    ['A', 'A#', 'B', 'C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A'], // 2da cuerda (A)
+                    ['E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B', 'C', 'C#', 'D', 'D#', 'E']  // 1ra cuerda (E)
+                ];
+                
+                this.init();
+            }
+
+            init() {
+                this.createFretboard();
+                this.createFretMarkers();
+                this.bindEvents();
+                this.updateDisplay();
+            }
+
+            createFretMarkers() {
+                const fretMarkers = document.getElementById('fretMarkers');
+                for (let i = 0; i <= 12; i++) {
+                    const marker = document.createElement('div');
+                    marker.className = 'fret-number';
+                    marker.textContent = i;
+                    fretMarkers.appendChild(marker);
+                }
+            }
+
+            createFretboard() {
+                this.fretboard.innerHTML = '';
+                
+                for (let string = 0; string < 6; string++) {
+                    for (let fret = 0; fret <= 12; fret++) {
+                        const fretDiv = document.createElement('div');
+                        fretDiv.className = 'fret';
+                        
+                        // Línea de cuerda
+                        const stringLine = document.createElement('div');
+                        stringLine.className = 'string-line';
+                        fretDiv.appendChild(stringLine);
+                        
+                        // Botón de nota
+                        const noteBtn = document.createElement('button');
+                        noteBtn.className = 'note-button hidden';
+                        noteBtn.dataset.string = string;
+                        noteBtn.dataset.fret = fret;
+                        noteBtn.textContent = this.notes[string][fret];
+                        
+                        fretDiv.appendChild(noteBtn);
+                        this.fretboard.appendChild(fretDiv);
+                    }
+                }
+            }
+
+            bindEvents() {
+                this.startBtn.addEventListener('click', () => this.startGame());
+                this.showNotesBtn.addEventListener('click', () => this.showSequence());
+                this.resetBtn.addEventListener('click', () => this.reset());
+                
+                this.fretboard.addEventListener('click', (e) => {
+                    if (e.target.classList.contains('note-button') && this.gameState === 'playing') {
+                        this.handleNoteClick(e.target);
+                    }
+                });
+            }
+
+            startGame() {
+                this.gameState = 'showing';
+                this.generateSequence();
+                this.showSequence();
+                this.updateMessage('¡Memoriza esta secuencia!');
+                this.startBtn.disabled = true;
+                this.showNotesBtn.disabled = false;
+            }
+
+            generateSequence() {
+                this.currentSequence = [];
+                const sequenceLength = Math.min(2 + this.level, 8);
+                
+                for (let i = 0; i < sequenceLength; i++) {
+                    const string = Math.floor(Math.random() * 6);
+                    const fret = Math.floor(Math.random() * 13);
+                    this.currentSequence.push({ string, fret });
+                }
+            }
+
+            async showSequence() {
+                this.hideAllNotes();
+                this.gameState = 'showing';
+                this.showNotesBtn.disabled = true;
+                
+                for (let i = 0; i < this.currentSequence.length; i++) {
+                    const { string, fret } = this.currentSequence[i];
+                    const noteBtn = this.getNoteButton(string, fret);
+                    
+                    noteBtn.classList.remove('hidden');
+                    noteBtn.classList.add('visible');
+                    
+                    await this.sleep(1000);
+                    
+                    noteBtn.classList.remove('visible');
+                    noteBtn.classList.add('hidden');
+                    
+                    await this.sleep(200);
+                }
+                
+                this.startMemoryPhase();
+            }
+
+            startMemoryPhase() {
+                this.gameState = 'playing';
+                this.playerSequence = [];
+                this.updateMessage('¡Ahora toca las notas en el mismo orden!');
+                
+                // Hacer todas las notas clickeables
+                document.querySelectorAll('.note-button').forEach(btn => {
+                    btn.classList.add('clickable');
+                });
+            }
+
+            handleNoteClick(noteBtn) {
+                const string = parseInt(noteBtn.dataset.string);
+                const fret = parseInt(noteBtn.dataset.fret);
+                
+                this.playerSequence.push({ string, fret });
+                
+                const isCorrect = this.checkCurrentNote(string, fret);
+                
+                if (isCorrect) {
+                    noteBtn.classList.add('correct');
+                    setTimeout(() => noteBtn.classList.remove('correct'), 600);
+                    
+                    if (this.playerSequence.length === this.currentSequence.length) {
+                        this.levelComplete();
+                    }
+                } else {
+                    noteBtn.classList.add('incorrect');
+                    setTimeout(() => noteBtn.classList.remove('incorrect'), 500);
+                    this.gameOver();
+                }
+            }
+
+            checkCurrentNote(string, fret) {
+                const currentIndex = this.playerSequence.length - 1;
+                const expectedNote = this.currentSequence[currentIndex];
+                return expectedNote.string === string && expectedNote.fret === fret;
+            }
+
+            levelComplete() {
+                this.score += this.level * 10;
+                this.streak++;
+                this.level++;
+                
+                this.updateDisplay();
+                this.updateMessage(`¡Nivel ${this.level - 1} completado! +${(this.level - 1) * 10} puntos`);
+                
+                setTimeout(() => {
+                    this.startGame();
+                }, 2000);
+            }
+
+            gameOver() {
+                this.gameState = 'complete';
+                this.streak = 0;
+                this.updateDisplay();
+                this.updateMessage(`¡Juego terminado! Puntuación final: ${this.score}`);
+                
+                // Mostrar la secuencia correcta
+                setTimeout(() => {
+                    this.revealCorrectSequence();
+                }, 1000);
+                
+                this.startBtn.disabled = false;
+                this.showNotesBtn.disabled = true;
+                
+                document.querySelectorAll('.note-button').forEach(btn => {
+                    btn.classList.remove('clickable');
+                });
+            }
+
+            revealCorrectSequence() {
+                this.currentSequence.forEach(({ string, fret }, index) => {
+                    setTimeout(() => {
+                        const noteBtn = this.getNoteButton(string, fret);
+                        noteBtn.classList.remove('hidden');
+                        noteBtn.classList.add('visible');
+                    }, index * 300);
+                });
+            }
+
+            hideAllNotes() {
+                document.querySelectorAll('.note-button').forEach(btn => {
+                    btn.classList.remove('visible', 'clickable', 'correct', 'incorrect');
+                    btn.classList.add('hidden');
+                });
+            }
+
+            getNoteButton(string, fret) {
+                return document.querySelector(`[data-string="${string}"][data-fret="${fret}"]`);
+            }
+
+            updateMessage(text) {
+                this.message.textContent = text;
+                this.message.className = 'message info';
+            }
+
+            updateDisplay() {
+                document.getElementById('level').textContent = this.level;
+                document.getElementById('score').textContent = this.score;
+                document.getElementById('streak').textContent = this.streak;
+            }
+
+            reset() {
+                this.level = 1;
+                this.score = 0;
+                this.streak = 0;
+                this.gameState = 'ready';
+                this.currentSequence = [];
+                this.playerSequence = [];
+                
+                this.hideAllNotes();
+                this.updateDisplay();
+                this.updateMessage('¡Memoriza las notas y luego tócalas en el orden correcto!');
+                
+                this.startBtn.disabled = false;
+                this.showNotesBtn.disabled = true;
+            }
+
+            sleep(ms) {
+                return new Promise(resolve => setTimeout(resolve, ms));
+            }
+        }
+
+        // Inicializar el juego cuando se carga la página
+        document.addEventListener('DOMContentLoaded', () => {
+            new FretboardMemoryGame();
+        });
+    </script>
+</body>
+</html>
